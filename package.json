@@ -1,0 +1,26 @@
+{
+  "name": "ac-gh-bot",
+  "version": "1.0.0",
+  "description": "A bot that performs actions based on gh webhooks for Team AC",
+  "main": "index.js",
+  "author": "kienD",
+  "license": "MIT",
+  "dependencies": {
+    "@octokit/core": "^3.5.1",
+    "@octokit/request": "^5.6.3",
+    "@octokit/webhooks": "^9.22.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.17.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "prettier": "^2.5.1",
+    "typescript": "^4.5.5"
+  },
+  "scripts": {
+    "build": "tsc",
+    "format": "prettier --write src",
+    "start": "node ./dist/webhooksServer.js",
+    "watch": "tsc -w"
+  }
+}
