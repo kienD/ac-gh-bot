@@ -66,17 +66,20 @@ export default class GithubRequest {
   public async createPullRequest(
     branchName: string,
     base: string,
-    title: string
+    title: string,
+    body?: string
   ) {
     const url = "/repos/{owner}/{repo}/pulls";
 
     const { data } = await this.createRequest(url, RequestMethods.Post, {
       base,
+      body,
       head: branchName,
       title,
     });
 
-    console.log(data);
+    this.setPullRequest(data);
+    this.setIssueNumber(data.number);
 
     return data;
   }
@@ -110,6 +113,10 @@ export default class GithubRequest {
 
   public getPullRequest() {
     return this.pullRequest;
+  }
+
+  public setIssueNumber(issueNumber: number) {
+    this.issueNumber = String(issueNumber);
   }
 
   public setPullRequest(pullRequest: any) {

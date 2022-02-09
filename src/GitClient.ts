@@ -39,12 +39,16 @@ export default class GitClient {
 
     const branchNameRegex = new RegExp(BRANCH_NAME_REGEX);
 
-    if (branchNameRegex.test(branchName)) {
-      return this.execSyncCommand(`git branch -D ${branchName}`);
-    } else if (currentBranch === branchName) {
-      throw new Error("Cannot delete current branch.");
-    } else {
-      throw new Error("Cannot delete branch that was not created by bot");
+    try {
+      if (branchNameRegex.test(branchName)) {
+        return this.execSyncCommand(`git branch -D ${branchName}`);
+      } else if (currentBranch === branchName) {
+        throw new Error("Cannot delete current branch.");
+      } else {
+        throw new Error("Cannot delete branch that was not created by bot");
+      }
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -64,6 +68,10 @@ export default class GitClient {
     this.pullRebase(branchName, "upstream");
 
     this.push(branchName, "origin");
+  }
+
+  private checkIfBranchExists(branchName: string) {
+    return this.execSyncCommand(`git rev-parse --verify ${branchName}`);
   }
 
   private execSyncCommand(command: string): string {

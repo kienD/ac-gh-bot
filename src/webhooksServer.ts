@@ -44,6 +44,12 @@ processQueueEmitter.on("processQueue", () => {
         .catch((err) => {
           actionQueue.dequeue();
 
+          processing = false;
+
+          if (!actionQueue.isEmpty()) {
+            processQueueEmitter.emit("processQueue");
+          }
+
           console.error(`Ping Error: ${err.message}`);
         });
 
@@ -61,6 +67,12 @@ processQueueEmitter.on("processQueue", () => {
         })
         .catch((err) => {
           actionQueue.dequeue();
+
+          processing = false;
+
+          if (!actionQueue.isEmpty()) {
+            processQueueEmitter.emit("processQueue");
+          }
 
           console.error(`Patch Error: ${err.message}`);
         });
@@ -80,6 +92,12 @@ processQueueEmitter.on("processQueue", () => {
         .catch((err) => {
           actionQueue.dequeue();
 
+          processing = false;
+
+          if (!actionQueue.isEmpty()) {
+            processQueueEmitter.emit("processQueue");
+          }
+
           console.error(`Hotfix Error: ${err.message}`);
         });
 
@@ -98,6 +116,7 @@ const addToQueue = async (action: Action) => {
 
   const { id: commentId } = await pullRequest.createComment("queued");
 
+  console.log("queue", action);
   actionQueue.enqueue({
     ...action,
     payload: { ...action.payload, commentId },
@@ -140,7 +159,7 @@ app.post(
 
 // addToQueue({
 //   name: "hotfix",
-//   payload: { commentId: 1033238873, id: 4014, params: ["3.1.x"] },
+//   payload: { commentId: 1033238873, id: 65, params: [] },
 // });
 
 // TODO: Add listener for changes to ci repo

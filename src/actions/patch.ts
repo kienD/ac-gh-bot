@@ -25,16 +25,16 @@ const patch = ({ commentId, id }: Action["payload"]) => {
     const gitClient = new GitClient(process.env.PATCH_DESTINATION_PATH);
 
     try {
-      originPR.updateComment("Starting patch process (1/6)", commentId);
+      await originPR.updateComment("Starting patch process (1/6)", commentId);
 
-      originPR.updateLabels([PatchStates.InProgress], PATCH_STATES);
+      await originPR.updateLabels([PatchStates.InProgress], PATCH_STATES);
 
       gitClient.checkoutBranch(process.env.BASE_BRANCH);
 
       // Update local and origin base branch
       gitClient.sync(process.env.BASE_BRANCH);
 
-      originPR.updateComment("Rebase complete (2/6)", commentId);
+      await originPR.updateComment("Rebase complete (2/6)", commentId);
 
       // Pull patch and fix patch file
       // TODO: Do we need this await and async?
@@ -44,20 +44,23 @@ const patch = ({ commentId, id }: Action["payload"]) => {
 
       fixPatch(branchName);
 
-      originPR.updateComment("Patch file updated (3/6)", commentId);
+      await originPR.updateComment("Patch file updated (3/6)", commentId);
 
       // Apply patch to destination branch
       gitClient.applyPatch(branchName);
 
-      originPR.updateComment("Patch applied to branch (4/6)", commentId);
+      await originPR.updateComment("Patch applied to branch (4/6)", commentId);
 
       // Push updated branch to destination repo
       gitClient.push(branchName, "origin");
 
-      originPR.updateComment(
+      await originPR.updateComment(
         `Pushed ${branchName} to destination repo (5/6)`,
         commentId
       );
+
+      const { html_url: originPRUrl, title } = originPR.getPullRequest();
+      console.log("url", originPRUrl, title);
 
       // Create new PR to destination repo
       const destinationPR = new GithubRequest({
@@ -65,22 +68,22 @@ const patch = ({ commentId, id }: Action["payload"]) => {
         repoOwner: process.env.GITHUB_DESTINATION_USER,
       });
 
-      const { title } = originPR.getPullRequest();
+      const { html_url: patchUrl, number: destPRNumber } =
+        await destinationPR.createPullRequest(
+          branchName,
+          process.env.BASE_BRANCH,
+          title,
+          `Original PR is [here](${originPRUrl})`
+        );
 
-      const { number: destPullId } = await destinationPR.createPullRequest(
-        branchName,
-        process.env.BASE_BRANCH,
-        title
-      );
+      await destinationPR.createComment("ci:forward");
 
-      destinationPR.createComment("ci:forward");
-
-      originPR.updateComment(
-        `PR forwarded to [here](https://github.com/${process.env.GITHUB_DESTINATION_USER}/${process.env.GITHUB_DESTINATION_REPO}/pull/${destPullId}) (6/6)`,
+      await originPR.updateComment(
+        `PR forwarded to [here](${patchUrl}) (6/6)`,
         commentId
       );
 
-      originPR.updateLabels([PatchStates.Success], PATCH_STATES);
+      await originPR.updateLabels([PatchStates.Success], PATCH_STATES);
 
       gitClient.checkoutBranch(process.env.BASE_BRANCH);
 
@@ -88,17 +91,18 @@ const patch = ({ commentId, id }: Action["payload"]) => {
 
       resolve("done");
     } catch (err) {
-      try {
-        gitClient.amAbort();
-      } catch (err) {}
+      // try {
+      //   gitClient.amAbort();
+      // } catch (err) {}
 
+      // TODO: add code to check if branch exists
       gitClient.checkoutBranch(process.env.BASE_BRANCH);
 
       gitClient.deleteBranch(branchName);
 
-      originPR.updateComment(`Patch Failed: ${err.message}`, commentId);
+      await originPR.updateComment(`Patch Failed: ${err.message}`, commentId);
 
-      originPR.updateLabels([PatchStates.Failed], PATCH_STATES);
+      await originPR.updateLabels([PatchStates.Failed], PATCH_STATES);
 
       reject(err);
     }

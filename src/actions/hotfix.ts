@@ -20,7 +20,17 @@ const hotfix = ({ commentId, id, params }: Action["payload"]) => {
   const gitClient = new GitClient(process.env.HOTFIX_DESTINATION_PATH);
 
   return new Promise(async (resolve, reject) => {
+    console.log(hotfixBranch);
     try {
+      if (!hotfixBranch) {
+        console.log("inside hotfix");
+        const err = new Error(
+          "Error: hotfix destination branch required. e.g. `/hotfix 3.1.x`"
+        );
+
+        throw err;
+      }
+
       await originPR.updateComment("Starting hotfix process (1/5)", commentId);
 
       await originPR.updateLabels([HotfixStates.InProgress], HOTFIX_STATES);
@@ -28,6 +38,7 @@ const hotfix = ({ commentId, id, params }: Action["payload"]) => {
       gitClient.checkoutBranch(hotfixBranch);
 
       gitClient.pullRebase(hotfixBranch, "upstream");
+
       await originPR.updateComment("Rebase complete (2/5)", commentId);
 
       const patchData = await originPR.fetchPatch();
@@ -45,24 +56,21 @@ const hotfix = ({ commentId, id, params }: Action["payload"]) => {
         commentId
       );
 
-      const { title } = originPR.getPullRequest();
+      const { html_url: originPRUrl, title } = originPR.getPullRequest();
 
-      const data = await originPR.createPullRequest(
+      const { html_url: hotfixUrl } = await originPR.createPullRequest(
         branchName,
         hotfixBranch,
-        `HOTFIX|${title}`
+        `HOTFIX|${title}`,
+        `Original PR is [here](${originPRUrl}) (6/6)`
       );
 
-      console.log("hotfix data", data);
-
-      const { number: hotfixPRId } = data;
-
       await originPR.updateComment(
-        `PR forwarded to [here](https://github.com/${process.env.GITHUB_DESTINATION_USER}/${process.env.GITHUB_ORIGIN_REPO}/pull/${hotfixPRId}) (5/5)`,
+        `PR forwarded to [here](${hotfixUrl}) (5/5)`,
         commentId
       );
 
-      await originPR.updateLabels([HotfixStates.Failed], HOTFIX_STATES);
+      await originPR.updateLabels([HotfixStates.Success], HOTFIX_STATES);
 
       gitClient.checkoutBranch(hotfixBranch);
 
@@ -74,9 +82,11 @@ const hotfix = ({ commentId, id, params }: Action["payload"]) => {
         gitClient.amAbort();
       } catch (err) {}
 
-      gitClient.checkoutBranch(hotfixBranch);
+      if (hotfixBranch) {
+        gitClient.checkoutBranch(hotfixBranch);
 
-      gitClient.deleteBranch(branchName);
+        gitClient.deleteBranch(branchName);
+      }
 
       originPR.updateComment(`Hotfix Failed: ${err.message}`, commentId);
 
