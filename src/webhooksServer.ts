@@ -7,7 +7,7 @@ import { Action } from "./types";
 import { createNodeMiddleware, Webhooks } from "@octokit/webhooks";
 import { hotfix, patch, ping } from "./actions";
 
-let serverPort = 8080;
+let serverPort = 80;
 
 if (process.argv.length > 2) {
   serverPort = Number(process.argv[2]);
@@ -28,6 +28,7 @@ processQueueEmitter.on("processQueue", () => {
 
   const { name, payload } = actionQueue.peek() || {};
 
+  // TODO: Add origin Repo in payload
   switch (name) {
     case "ping":
       ping(payload)
