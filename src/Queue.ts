@@ -26,16 +26,18 @@ export default class Queue {
     }
 
     public peek(): Action {
-        console.log('Peeking', this.queue[0]);
+        const action = this.queue[0];
 
-        return this.queue[0];
+        console.log('Peeking', action);
+
+        return action;
     }
 
-    public getCount(): number {
+    public size(): number {
         return this.queue.length;
     }
 
     public isEmpty(): boolean {
-        return this.getCount() === 0;
+        return this.size() === 0;
     }
 }
