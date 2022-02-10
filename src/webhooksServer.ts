@@ -104,6 +104,8 @@ processQueueEmitter.on("processQueue", () => {
 
       break;
     default:
+      processing = false;
+
       break;
   }
 });
