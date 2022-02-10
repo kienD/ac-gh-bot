@@ -1,36 +1,41 @@
-import { Action } from "./types";
+import { Action } from './types';
 
 export default class Queue {
-  queue: Action[];
+    queue: Action[];
 
-  constructor(initialQueue: Action[] = []) {
-    this.queue = initialQueue;
-  }
+    constructor(initialQueue: Action[] = []) {
+        this.queue = initialQueue;
+    }
 
-  public clearAll(): void {
-    this.queue = [];
-  }
+    public clearAll(): void {
+        console.log('Queue Cleared');
 
-  public dequeue(): Action {
-    console.log("dequeue", this.queue);
-    return this.queue.shift();
-  }
+        this.queue = [];
+    }
 
-  public enqueue(action: Action): void {
-    console.log("enqueue", this.queue);
-    this.queue.push(action);
-  }
+    public dequeue(): Action {
+        console.log('dequeuing');
 
-  public peek(): Action {
-    console.log("peek", this.queue);
-    return this.queue[0];
-  }
+        return this.queue.shift();
+    }
 
-  public getCount(): number {
-    return this.queue.length;
-  }
+    public enqueue(action: Action): void {
+        console.log('Queuing', action);
 
-  public isEmpty(): boolean {
-    return this.getCount() === 0;
-  }
+        this.queue.push(action);
+    }
+
+    public peek(): Action {
+        console.log('Peeking', this.queue[0]);
+
+        return this.queue[0];
+    }
+
+    public getCount(): number {
+        return this.queue.length;
+    }
+
+    public isEmpty(): boolean {
+        return this.getCount() === 0;
+    }
 }

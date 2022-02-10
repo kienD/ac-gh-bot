@@ -1,152 +1,113 @@
-import "dotenv/config";
-import EventEmitter from "events";
-import express from "express";
-import GithubRequest from "./GithubRequest";
-import Queue from "./Queue";
-import { Action } from "./types";
-import { createNodeMiddleware, Webhooks } from "@octokit/webhooks";
-import { hotfix, patch, ping } from "./actions";
+import 'dotenv/config';
+import EventEmitter from 'events';
+import express from 'express';
+import GithubRequest from './GithubRequest';
+import Queue from './Queue';
+import { Action } from './types';
+import { ACTIONS_PATH_MAP, ActionTypes } from './constants';
+import { createNodeMiddleware, Webhooks } from '@octokit/webhooks';
+import { Worker } from 'worker_threads';
 
 let serverPort = 80;
 
 if (process.argv.length > 2) {
-  serverPort = Number(process.argv[2]);
+    serverPort = Number(process.argv[2]);
 }
 
 const faroWebhooks = new Webhooks({
-  secret: process.env.GITHUB_SECRET,
+    secret: process.env.GITHUB_SECRET,
 });
 
 const actionQueue = new Queue();
 
 let processing = false;
 
+const createWorker = ({ payload, type }: Action): Promise<any> => {
+    return new Promise((resolve, reject) => {
+        const filePath = ACTIONS_PATH_MAP[type];
+
+        const worker = new Worker(filePath, {
+            workerData: { payload },
+        });
+
+        worker.on('message', resolve);
+
+        worker.on('error', val => {
+            reject(val);
+        });
+
+        worker.on('exit', code => {
+            if (code !== 0) {
+                reject(new Error(`Worker stopped with exit code ${code}`));
+            }
+        });
+    });
+};
+
 const processQueueEmitter = new EventEmitter();
 
-processQueueEmitter.on("processQueue", () => {
-  processing = true;
+processQueueEmitter.on('processQueue', () => {
+    const action = actionQueue.peek();
 
-  const { name, payload } = actionQueue.peek() || {};
+    if (ACTIONS_PATH_MAP[action?.type]) {
+        processing = true;
 
-  // TODO: Add origin Repo in payload
-  switch (name) {
-    case "ping":
-      ping(payload)
-        .then((val) => {
-          console.log(val);
-          actionQueue.dequeue();
+        createWorker(action)
+            .catch(err => {
+                console.error(`Ping Error: ${err.message}`);
+            })
+            .finally(() => {
+                actionQueue.dequeue();
 
-          processing = false;
+                processing = false;
 
-          if (!actionQueue.isEmpty()) {
-            processQueueEmitter.emit("processQueue");
-          }
-        })
-        .catch((err) => {
-          actionQueue.dequeue();
-
-          processing = false;
-
-          if (!actionQueue.isEmpty()) {
-            processQueueEmitter.emit("processQueue");
-          }
-
-          console.error(`Ping Error: ${err.message}`);
-        });
-
-      break;
-    case "patch":
-      patch(payload)
-        .then(() => {
-          actionQueue.dequeue();
-
-          processing = false;
-
-          if (!actionQueue.isEmpty()) {
-            processQueueEmitter.emit("processQueue");
-          }
-        })
-        .catch((err) => {
-          actionQueue.dequeue();
-
-          processing = false;
-
-          if (!actionQueue.isEmpty()) {
-            processQueueEmitter.emit("processQueue");
-          }
-
-          console.error(`Patch Error: ${err.message}`);
-        });
-
-      break;
-    case "hotfix":
-      hotfix(payload)
-        .then(() => {
-          actionQueue.dequeue();
-
-          processing = false;
-
-          if (!actionQueue.isEmpty()) {
-            processQueueEmitter.emit("processQueue");
-          }
-        })
-        .catch((err) => {
-          actionQueue.dequeue();
-
-          processing = false;
-
-          if (!actionQueue.isEmpty()) {
-            processQueueEmitter.emit("processQueue");
-          }
-
-          console.error(`Hotfix Error: ${err.message}`);
-        });
-
-      break;
-    default:
-      processing = false;
-
-      break;
-  }
+                if (!actionQueue.isEmpty()) {
+                    processQueueEmitter.emit('processQueue');
+                }
+            });
+    }
 });
 
 const addToQueue = async (action: Action) => {
-  const pullRequest = new GithubRequest({
-    issueNumber: action.payload.id,
-    repoName: process.env.GITHUB_ORIGIN_REPO,
-    repoOwner: process.env.GITHUB_ORIGIN_USER,
-  });
+    const pullRequest = new GithubRequest({
+        issueNumber: action.payload.id,
+        repoName: process.env.GITHUB_ORIGIN_REPO,
+        repoOwner: process.env.GITHUB_ORIGIN_USER,
+    });
 
-  const { id: commentId } = await pullRequest.createComment("queued");
+    const { id: commentId } = await pullRequest.createComment('queued');
 
-  console.log("queue", action);
-  actionQueue.enqueue({
-    ...action,
-    payload: { ...action.payload, commentId },
-  });
+    actionQueue.enqueue({
+        ...action,
+        payload: { ...action.payload, commentId },
+    });
 
-  if (!processing) {
-    processQueueEmitter.emit("processQueue");
-  }
+    if (!processing) {
+        processQueueEmitter.emit('processQueue');
+    }
 };
 
 faroWebhooks.on(
-  "issue_comment.created",
-  ({
-    payload: {
-      comment: { body },
-      issue: { number: id },
-    },
-  }) => {
-    const [command, ...params] = body.trim().split(" ");
+    'issue_comment.created',
+    ({
+        payload: {
+            comment: { body },
+            issue: { number: id },
+        },
+    }) => {
+        const [command, ...params] = body.trim().split(' ');
 
-    if (command.startsWith("/")) {
-      addToQueue({
-        payload: params ? { id, params } : { id },
-        name: command.slice(1),
-      });
+        if (command.startsWith('/')) {
+            const formattedCommand = command.slice(1).toLowerCase();
+
+            if (ACTIONS_PATH_MAP[formattedCommand]) {
+                addToQueue({
+                    payload: params ? { id, params } : { id },
+                    type: formattedCommand as ActionTypes,
+                });
+            }
+        }
     }
-  }
 );
 
 const app = express();
@@ -154,15 +115,15 @@ const app = express();
 app.use(express.json());
 
 app.post(
-  "/",
-  createNodeMiddleware(faroWebhooks, {
-    path: "/",
-  })
+    '/',
+    createNodeMiddleware(faroWebhooks, {
+        path: '/',
+    })
 );
 
 // addToQueue({
-//   name: "hotfix",
-//   payload: { commentId: 1033238873, id: 65, params: [] },
+// 	type: 'ping',
+// 	payload: { commentId: 1033238873, id: 65, params: [] },
 // });
 
 // TODO: Add listener for changes to ci repo
@@ -193,5 +154,5 @@ app.post(
 // );
 
 app.listen(serverPort, () => {
-  console.log(`Listening for hooks at / on ${serverPort}`);
+    console.log(`Listening for hooks at / on ${serverPort}`);
 });
