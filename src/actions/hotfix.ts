@@ -2,6 +2,7 @@ import GitClient from '../GitClient';
 import GithubRequest from '../GithubRequest';
 import { Action } from '../types';
 import { HotfixStates } from '../constants';
+import { isForceFlag } from '../utils';
 import { workerData, parentPort } from 'worker_threads';
 import { writeFileSync } from 'fs';
 
@@ -9,7 +10,7 @@ const HOTFIX_STATES = Object.values(HotfixStates);
 
 const hotfix = ({ commentId, id, params }: Action['payload']) => {
   return new Promise(async (resolve, reject) => {
-    const [hotfixBranch] = params;
+    const [hotfixBranch, flag] = params;
 
     const branchName = `hotfix-pull-${id}`;
 
@@ -50,7 +51,7 @@ const hotfix = ({ commentId, id, params }: Action['payload']) => {
 
       await originPR.updateComment(`Patch applied to branch (3/5)`, commentId);
 
-      gitClient.push(branchName, 'origin');
+      gitClient.push(branchName, 'origin', isForceFlag(flag));
 
       await originPR.updateComment(
         `Pushed ${branchName} to origin repo (4/5)`,

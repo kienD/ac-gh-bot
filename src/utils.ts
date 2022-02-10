@@ -1,5 +1,8 @@
 import { execSync } from 'child_process';
 
+export const isForceFlag = (flag: string): boolean =>
+  ['-f', '--force'].includes(flag);
+
 export const createUpdatedPatch = (
   branchName: string,
   updatedLines: string

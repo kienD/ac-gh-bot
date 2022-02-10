@@ -2,6 +2,7 @@ import GitClient from '../GitClient';
 import GithubRequest from '../GithubRequest';
 import { Action } from '../types';
 import { fixPatch } from '../utils';
+import { isForceFlag } from '../utils';
 import { PatchStates } from '../constants';
 import { workerData, parentPort } from 'worker_threads';
 import { writeFileSync } from 'fs';
@@ -9,8 +10,10 @@ import { writeFileSync } from 'fs';
 // add check to make sure additions/deletions/changes are the same between old and new PR.
 const PATCH_STATES = Object.values(PatchStates);
 
-const patch = ({ commentId, id }: Action['payload']) => {
+const patch = ({ commentId, id, params }: Action['payload']) => {
   return new Promise(async (resolve, reject) => {
+    const [flag] = params;
+
     const branchName = `patch-pull-${id}`;
 
     const originPR = new GithubRequest({
@@ -55,7 +58,7 @@ const patch = ({ commentId, id }: Action['payload']) => {
       await originPR.updateComment('Patch applied to branch (4/6)', commentId);
 
       // Push updated branch to destination repo
-      gitClient.push(branchName, 'origin');
+      gitClient.push(branchName, 'origin', isForceFlag(flag));
 
       await originPR.updateComment(
         `Pushed ${branchName} to destination repo (5/6)`,
