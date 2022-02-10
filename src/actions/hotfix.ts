@@ -40,6 +40,8 @@ const hotfix = ({ commentId, id, params }: Action['payload']) => {
 
       await originPR.updateComment('Rebase complete (2/5)', commentId);
 
+      gitClient.checkoutBranch(branchName, true);
+
       const patchData = await originPR.fetchPatch();
 
       writeFileSync(`/tmp/${branchName}.patch`, patchData);
@@ -57,12 +59,13 @@ const hotfix = ({ commentId, id, params }: Action['payload']) => {
 
       const { html_url: originPRUrl, title } = originPR.getPullRequest();
 
-      const { html_url: hotfixUrl } = await originPR.createPullRequest(
-        branchName,
-        hotfixBranch,
-        `HOTFIX|${title}`,
-        `Original PR is [here](${originPRUrl})`
-      );
+      const { html_url: hotfixUrl } = await originPR.createPullRequest({
+        base: hotfixBranch,
+        body: `Original PR is [here](${originPRUrl})`,
+        branch: branchName,
+        title: `HOTFIX|${title}`,
+        username: process.env.GITHUB_DESTINATION_USER,
+      });
 
       await originPR.updateComment(
         `PR forwarded to [here](${hotfixUrl}) (5/5)`,

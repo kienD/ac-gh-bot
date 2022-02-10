@@ -37,6 +37,8 @@ const patch = ({ commentId, id }: Action['payload']) => {
 
       await originPR.updateComment('Rebase complete (2/6)', commentId);
 
+      gitClient.checkoutBranch(branchName, true);
+
       // Pull patch and fix patch file
       // TODO: Do we need this await and async?
       const patchData = await originPR.fetchPatch();
@@ -68,13 +70,13 @@ const patch = ({ commentId, id }: Action['payload']) => {
         repoOwner: process.env.GITHUB_DESTINATION_USER,
       });
 
-      const { html_url: patchUrl, number: destPRNumber } =
-        await destinationPR.createPullRequest(
-          branchName,
-          process.env.BASE_BRANCH,
-          title,
-          `Original PR is [here](${originPRUrl})`
-        );
+      const { html_url: patchUrl } = await destinationPR.createPullRequest({
+        base: process.env.BASE_BRANCH,
+        body: `Original PR is [here](${originPRUrl})`,
+        branch: branchName,
+        title,
+        username: process.env.GITHUB_DESTINATION_USER,
+      });
 
       await destinationPR.createComment('ci:forward');
 

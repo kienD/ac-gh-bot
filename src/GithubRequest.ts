@@ -62,19 +62,25 @@ export default class GithubRequest {
     return data;
   }
 
-  // TODO: Create shape for PR response object
-  public async createPullRequest(
-    branchName: string,
-    base: string,
-    title: string,
-    body?: string
-  ) {
+  public async createPullRequest({
+    base,
+    body,
+    branch,
+    title,
+    username,
+  }: {
+    base: string;
+    body?: string;
+    branch: string;
+    title: string;
+    username: string;
+  }) {
     const url = '/repos/{owner}/{repo}/pulls';
 
     const { data } = await this.createRequest(url, RequestMethods.Post, {
       base,
       body,
-      head: branchName,
+      head: `${username}:${branch}`,
       title,
     });
 
