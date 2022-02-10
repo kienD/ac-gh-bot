@@ -78,8 +78,13 @@ export default class GithubRequest {
       title,
     });
 
-    this.setPullRequest(data);
-    this.setIssueNumber(data.number);
+    if (!this.getPullRequest()) {
+      this.setPullRequest(data);
+    }
+
+    if (!this.issueNumber) {
+      this.setIssueNumber(data.number);
+    }
 
     return data;
   }
