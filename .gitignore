@@ -1,4 +1,6 @@
 .env
 config
 dist
+error-log.txt
+log.txt
 node_modules
