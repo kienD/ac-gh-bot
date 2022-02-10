@@ -21,11 +21,7 @@ export default class GitClient {
     }
 
     public applyPatch(branchName: string): void {
-        this.checkoutBranch(branchName, true);
-
         this.am(branchName);
-
-        // TODO: Add comment
     }
 
     public checkoutBranch(branchName: string, create: boolean = false): string {
