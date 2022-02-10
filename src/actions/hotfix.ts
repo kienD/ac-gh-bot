@@ -23,7 +23,6 @@ const hotfix = ({ commentId, id, params }: Action["payload"]) => {
     console.log(hotfixBranch);
     try {
       if (!hotfixBranch) {
-        console.log("inside hotfix");
         const err = new Error(
           "Error: hotfix destination branch required. e.g. `/hotfix 3.1.x`"
         );
@@ -62,7 +61,7 @@ const hotfix = ({ commentId, id, params }: Action["payload"]) => {
         branchName,
         hotfixBranch,
         `HOTFIX|${title}`,
-        `Original PR is [here](${originPRUrl}) (6/6)`
+        `Original PR is [here](${originPRUrl})`
       );
 
       await originPR.updateComment(
@@ -88,7 +87,7 @@ const hotfix = ({ commentId, id, params }: Action["payload"]) => {
         gitClient.deleteBranch(branchName);
       }
 
-      originPR.updateComment(`Hotfix Failed: ${err.message}`, commentId);
+      await originPR.updateComment(`Hotfix Failed: ${err.message}`, commentId);
 
       await originPR.updateLabels([HotfixStates.Failed], HOTFIX_STATES);
 
