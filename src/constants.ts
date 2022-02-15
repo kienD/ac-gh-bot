@@ -18,6 +18,10 @@ export enum PatchStates {
   Success = 'Patch Completed',
 }
 
+export enum ReviewStates {
+  Approved = 'APPROVED',
+}
+
 export enum RequestMethods {
   Get = 'GET',
   Patch = 'PATCH',

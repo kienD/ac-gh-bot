@@ -1,6 +1,10 @@
 import { request } from '@octokit/request';
 import { RequestHeaders } from './types';
-import { RequestMethods } from './constants';
+import { RequestMethods, ReviewStates } from './constants';
+
+const protocolOverrideUsers: string[] = JSON.parse(
+  process.env.PROTOCOL_OVERRIDE_USERS
+);
 
 // TODO: Rename to like GithubPRRequest.  Probably should extend the original  GithubRequest.   maybe rename to GithubClient
 export default class GithubRequest {
@@ -49,6 +53,32 @@ export default class GithubRequest {
     });
 
     return data;
+  }
+
+  public getUserName() {
+    const {
+      user: { login: userName },
+    } = this.getPullRequest();
+
+    return userName;
+  }
+
+  public async getReviews() {
+    const { data } = await this.createRequest(
+      '/repos/{owner}/{repo}/pulls/{pull_number}/reviews',
+      RequestMethods.Get,
+      {
+        pull_number: this.issueNumber,
+      }
+    );
+
+    return data;
+  }
+
+  public async checkPermissions() {
+    const reviews = await this.getReviews();
+
+    return reviews.length >= 2 || this.hasOverrideUserApproval(reviews);
   }
 
   public async updateComment(comment: string, commentId: number) {
@@ -158,6 +188,18 @@ export default class GithubRequest {
     });
 
     console.log(data);
+  }
+
+  private hasOverrideUserApproval(reviews): boolean {
+    const approvals = reviews.map(({ state, user: { login: userName } }) => {
+      if (state === ReviewStates.Approved) {
+        return userName;
+      }
+    });
+
+    return !!approvals.filter((user: string) =>
+      protocolOverrideUsers.includes(user.toLowerCase())
+    ).length;
   }
 
   private async createRequest(

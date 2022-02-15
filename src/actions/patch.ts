@@ -25,6 +25,14 @@ const patch = ({ commentId, id, params }: Action['payload']): Promise<void> => {
     const gitClient = new GitClient(process.env.PATCH_DESTINATION_PATH);
 
     try {
+      const validForPatch = await originPR.checkPermissions();
+
+      if (!validForPatch) {
+        throw new Error(
+          'PR reviews 2 approvals from anyone or a single over protocol reviewer'
+        );
+      }
+
       await originPR.updateLabels([PatchStates.InProgress], PATCH_STATES);
 
       await originPR.updateComment('Starting patch process (1/6)', commentId);
