@@ -3,6 +3,7 @@ import { ActionTypes } from './constants';
 export type Action = {
   type: ActionTypes;
   payload: {
+    admin: boolean;
     commentId?: number;
     id: number;
     params?: string[];

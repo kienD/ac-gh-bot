@@ -10,7 +10,12 @@ import { writeFileSync } from 'fs';
 // add check to make sure additions/deletions/changes are the same between old and new PR.
 const PATCH_STATES = Object.values(PatchStates);
 
-const patch = ({ commentId, id, params }: Action['payload']): Promise<void> => {
+const patch = ({
+  admin,
+  commentId,
+  id,
+  params,
+}: Action['payload']): Promise<void> => {
   return new Promise(async (resolve, reject) => {
     const [flag] = params;
 
@@ -25,7 +30,7 @@ const patch = ({ commentId, id, params }: Action['payload']): Promise<void> => {
     const gitClient = new GitClient(process.env.PATCH_DESTINATION_PATH);
 
     try {
-      const validForPatch = await originPR.checkPermissions();
+      const validForPatch = admin || (await originPR.checkPermissions());
 
       if (!validForPatch) {
         throw new Error(

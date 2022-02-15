@@ -7,6 +7,7 @@ import { Action } from './types';
 import { ACTIONS_PATH_MAP, ActionTypes, TestFailureStates } from './constants';
 import { createNodeMiddleware, Webhooks } from '@octokit/webhooks';
 import { Worker } from 'worker_threads';
+import { isOverrideProtocolUser } from './utils';
 
 let serverPort = 80;
 
@@ -87,27 +88,27 @@ const addToQueue = async (action: Action) => {
   }
 };
 
-addToQueue({
-  payload: { id: 56 },
-  type: 'ping',
-});
-
 faroWebhooks.on(
   'issue_comment.created',
   ({
     payload: {
-      comment: { body },
+      comment: {
+        body,
+        user: { login },
+      },
       issue: { number: id },
     },
   }) => {
     const [command, ...params] = body.trim().split(' ');
+
+    const admin = isOverrideProtocolUser(login);
 
     if (command.startsWith('/')) {
       const formattedCommand = command.slice(1).toLowerCase();
 
       if (ACTIONS_PATH_MAP[formattedCommand]) {
         addToQueue({
-          payload: params ? { id, params } : { id },
+          payload: params ? { admin, id, params } : { id, admin },
           type: formattedCommand as ActionTypes,
         });
       }

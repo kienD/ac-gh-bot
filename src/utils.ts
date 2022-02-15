@@ -27,3 +27,11 @@ export const fixPatch = (branchName: string) => {
     throw err;
   }
 };
+
+export const isOverrideProtocolUser = (userName: string) => {
+  const protocolOverrideUsers: string[] = JSON.parse(
+    process.env.PROTOCOL_OVERRIDE_USERS
+  );
+
+  return protocolOverrideUsers.includes(userName.toLowerCase());
+};
