@@ -8,7 +8,11 @@ import { writeFileSync } from 'fs';
 
 const HOTFIX_STATES = Object.values(HotfixStates);
 
-const hotfix = ({ commentId, id, params }: Action['payload']) => {
+const hotfix = ({
+  commentId,
+  id,
+  params,
+}: Action['payload']): Promise<void> => {
   return new Promise(async (resolve, reject) => {
     const [hotfixBranch, flag] = params;
 
@@ -35,13 +39,15 @@ const hotfix = ({ commentId, id, params }: Action['payload']) => {
 
       await originPR.updateLabels([HotfixStates.InProgress], HOTFIX_STATES);
 
-      gitClient.checkoutBranch(hotfixBranch);
+      await gitClient.checkoutBranch(hotfixBranch);
 
-      gitClient.pullRebase(hotfixBranch, 'upstream');
+      await gitClient.pullRebase(hotfixBranch, 'upstream');
 
       await originPR.updateComment('Rebase complete (2/5)', commentId);
 
-      gitClient.checkoutBranch(branchName, true);
+      await gitClient.copyBranch(branchName);
+
+      await gitClient.checkoutBranch(branchName);
 
       const patchData = await originPR.fetchPatch();
 
@@ -51,7 +57,7 @@ const hotfix = ({ commentId, id, params }: Action['payload']) => {
 
       await originPR.updateComment(`Patch applied to branch (3/5)`, commentId);
 
-      gitClient.push(branchName, 'origin', isForceFlag(flag));
+      await gitClient.push(branchName, 'origin', isForceFlag(flag));
 
       await originPR.updateComment(
         `Pushed ${branchName} to origin repo (4/5)`,
@@ -75,11 +81,11 @@ const hotfix = ({ commentId, id, params }: Action['payload']) => {
 
       await originPR.updateLabels([HotfixStates.Success], HOTFIX_STATES);
 
-      gitClient.checkoutBranch(hotfixBranch);
+      await gitClient.checkoutBranch(hotfixBranch);
 
-      gitClient.deleteBranch(branchName);
+      await gitClient.deleteBranch(branchName);
 
-      resolve('done');
+      resolve();
       parentPort.postMessage('done');
     } catch (err) {
       process.exitCode = 1;
@@ -90,17 +96,10 @@ const hotfix = ({ commentId, id, params }: Action['payload']) => {
 
       if (hotfixBranch) {
         gitClient.checkoutBranch(hotfixBranch);
-
-        gitClient.deleteBranch(branchName);
       }
 
-      await originPR.updateComment(
-        `
-									Hotfix Failed:
-									Error: ${err.message}
-								`,
-        commentId
-      );
+      console.log(err);
+      await originPR.updateComment(`Hotfix Error: ${err.message}`, commentId);
 
       await originPR.updateLabels([HotfixStates.Failed], HOTFIX_STATES);
 
