@@ -23,8 +23,9 @@
   "scripts": {
     "build": "tsc",
     "format": "prettier --write src",
-    "start": "node ./dist/webhooksServer.js",
-    "start:prod": "pm2 ./dist/webhooksServer.js",
+    "restart": "pm2 restart ./dist/webhooksServer.js",
+    "start": "pm2 start ./dist/webhooksServer.js",
+    "stop": "pm2 stop ./dist/webhooksServer.js",
     "watch": "tsc -w"
   }
 }
