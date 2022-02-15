@@ -6,6 +6,13 @@ export enum ActionTypes {
   Ping = 'ping',
 }
 
+export enum TestFailureStates {
+  Test = 'ci:test  - failure',
+  TestSF = 'ci:test:SF  - failure',
+  TestStable = 'ci:test:stable  - failure',
+  TestRelevant = 'ci:test:relevant  - failure',
+}
+
 export enum HotfixStates {
   Failed = 'Hotfix Failed',
   InProgress = 'Hotfix in Progress',

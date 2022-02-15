@@ -4,7 +4,7 @@ import express from 'express';
 import GithubRequest from './GithubRequest';
 import Queue from './Queue';
 import { Action } from './types';
-import { ACTIONS_PATH_MAP, ActionTypes } from './constants';
+import { ACTIONS_PATH_MAP, ActionTypes, TestFailureStates } from './constants';
 import { createNodeMiddleware, Webhooks } from '@octokit/webhooks';
 import { Worker } from 'worker_threads';
 
@@ -110,6 +110,45 @@ faroWebhooks.on(
   }
 );
 
+const lrciacWebhooks = new Webhooks({
+  secret: process.env.GITHUB_SECRET,
+});
+
+lrciacWebhooks.on(
+  'pull_request.labeled',
+  ({
+    payload: {
+      pull_request: {
+        head: { ref },
+        labels,
+      },
+      number,
+    },
+  }) => {
+    const TEST_FAILURE_STATES = Object.values(TestFailureStates);
+
+    const errorLabels = labels.filter(({ name }) =>
+      TEST_FAILURE_STATES.includes(name as TestFailureStates)
+    );
+
+    if (!!errorLabels.length) {
+      const [issueNumber] = ref.match(/[\d]+/);
+
+      const originPR = new GithubRequest({
+        issueNumber: Number(issueNumber),
+        repoName: process.env.GITHUB_ORIGIN_REPO,
+        repoOwner: process.env.GITHUB_ORIGIN_USER,
+      });
+
+      originPR.createComment(
+        `The following failures still exist on [pull-${number}](https://github.com/liferay-continuous-integration-ac/liferay-portal-ee/pull/${number}):\n${errorLabels.map(
+          ({ name }) => `${name}\n`
+        )}`
+      );
+    }
+  }
+);
+
 const app = express();
 
 app.use(express.json());
@@ -121,37 +160,12 @@ app.post(
   })
 );
 
-// addToQueue({
-// 	type: 'ping',
-// 	payload: { commentId: 1033238873, id: 65, params: [] },
-// });
-
-// TODO: Add listener for changes to ci repo
-// app.post(
-//   "/hooks",
-//   createNodeMiddleware(faroWebhooks, {
-//     path: "/",
-//   })
-// );
-// app.on(
-//   "request",
-//   createNodeMiddleware(webhooks, {
-//     onUnhandledRequest: (req, res) => {
-//       console.log("unhandled", res);
-//     },
-//     path: "/",
-//   })
-// );
-
-// app.on(
-//   "request",
-//   createNodeMiddleware(webhooks, {
-//     onUnhandledRequest: (req, res) => {
-//       console.log("unhandled", res);
-//     },
-//     path: "/hooks",
-//   })
-// );
+app.post(
+  '/liferay-ci-ac',
+  createNodeMiddleware(lrciacWebhooks, {
+    path: '/liferay-ci-ac',
+  })
+);
 
 app.listen(serverPort, () => {
   console.log(`Listening for hooks at / on ${serverPort}`);
