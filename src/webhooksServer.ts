@@ -127,6 +127,7 @@ lrciacWebhooks.on(
   }) => {
     const TEST_FAILURE_STATES = Object.values(TestFailureStates);
 
+    // TODO: if "pending" exists then don't post a message
     const errorLabels = labels.filter(({ name }) =>
       TEST_FAILURE_STATES.includes(name as TestFailureStates)
     );
