@@ -25,6 +25,10 @@ export default class Queue {
     this.queue.push(action);
   }
 
+  public getQueue(): Action[] {
+    return this.queue;
+  }
+
   public peek(): Action {
     const action = this.queue[0];
 

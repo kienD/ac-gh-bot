@@ -7,7 +7,7 @@ import { Action } from './types';
 import { ACTIONS_PATH_MAP, ActionTypes, TestFailureStates } from './constants';
 import { createNodeMiddleware, Webhooks } from '@octokit/webhooks';
 import { Worker } from 'worker_threads';
-import { isOverrideProtocolUser } from './utils';
+import { formatQueue, isOverrideProtocolUser } from './utils';
 
 let serverPort = 80;
 
@@ -111,6 +111,16 @@ faroWebhooks.on(
           payload: params ? { admin, id, params } : { id, admin },
           type: formattedCommand as ActionTypes,
         });
+      } else if (formattedCommand === ActionTypes.CheckQueue) {
+        const originPR = new GithubRequest({
+          issueNumber: id,
+          repoName: process.env.GITHUB_ORIGIN_REPO,
+          repoOwner: process.env.GITHUB_ORIGIN_USER,
+        });
+
+        const queue = formatQueue(actionQueue.getQueue());
+
+        originPR.createComment(queue.join('\n'));
       }
     }
   }

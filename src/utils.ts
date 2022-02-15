@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import { Action } from 'types';
 
 export const isForceFlag = (flag: string): boolean =>
   ['-f', '--force'].includes(flag);
@@ -34,4 +35,16 @@ export const isOverrideProtocolUser = (userName: string) => {
   );
 
   return protocolOverrideUsers.includes(userName.toLowerCase());
+};
+
+export const formatQueue = (queue: Action[]): string[] => {
+  if (!queue.length) {
+    return ['No actions in queue'];
+  }
+
+  return queue.map(({ payload: { id }, type }, i) => {
+    return `${i + 1}: ${type} - [pull-${id}](https://github.com/${
+      process.env.GITHUB_ORIGIN_USER
+    }/${process.env.GITHUB_ORIGIN_REPO}/pull/${id})`;
+  });
 };

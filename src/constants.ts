@@ -4,6 +4,7 @@ export enum ActionTypes {
   Hotfix = 'hotfix',
   Patch = 'patch',
   Ping = 'ping',
+  CheckQueue = 'checkqueue',
 }
 
 export enum TestFailureStates {
