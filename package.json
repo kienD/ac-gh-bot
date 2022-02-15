@@ -26,7 +26,7 @@
 		"logs": "pm2 logs ./dist/webhooksServer.js",
 		"monitor": "pm2 monit ./dist/webhooksServer.js",
     "restart": "pm2 restart ./dist/webhooksServer.js",
-    "start": "pm2 start ./dist/webhooksServer.js",
+    "start": "node ./dist/webhooksServer.js",
     "start:prod": "pm2 start ./dist/webhooksServer.js --output log.txt --error error-log.txt",
     "stop": "pm2 stop ./dist/webhooksServer.js",
     "watch": "tsc -w"

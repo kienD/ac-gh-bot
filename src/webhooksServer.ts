@@ -87,6 +87,11 @@ const addToQueue = async (action: Action) => {
   }
 };
 
+addToQueue({
+  payload: { id: 56 },
+  type: 'ping',
+});
+
 faroWebhooks.on(
   'issue_comment.created',
   ({

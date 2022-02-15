@@ -76,6 +76,18 @@ export default class GithubRequest {
   }
 
   public async checkPermissions() {
+    if (!this.getPullRequest()) {
+      await this.fetchPullRequest();
+    }
+
+    const {
+      user: { login },
+    } = this.getPullRequest();
+
+    if (this.hasOverrideUserApproval([login])) {
+      return true;
+    }
+
     const reviews = await this.getReviews();
 
     return reviews.length >= 2 || this.hasOverrideUserApproval(reviews);
