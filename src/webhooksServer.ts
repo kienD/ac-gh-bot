@@ -4,7 +4,7 @@ import express from 'express';
 import GithubRequest from './GithubRequest';
 import Queue from './Queue';
 import { Action } from './types';
-import { ACTIONS_PATH_MAP, ActionTypes, TestFailureStates } from './constants';
+import { ACTIONS_PATH_MAP, ActionTypes } from './constants';
 import { createNodeMiddleware, Webhooks } from '@octokit/webhooks';
 import { Worker } from 'worker_threads';
 import { formatQueue, isOverrideProtocolUser } from './utils';
@@ -141,27 +141,35 @@ lrciacWebhooks.on(
       number,
     },
   }) => {
-    const TEST_FAILURE_STATES = Object.values(TestFailureStates);
+    const CI_TEST_FAILURE_REGEX =
+      /ci:test(:(sf|stable|relevant))?\s*-\s*failure/;
+    const CI_TEST_PENDING_REGEX =
+      /ci:test(:(sf|stable|relevant))?\s*-\s*pending/;
 
-    // TODO: if "pending" exists then don't post a message
-    const errorLabels = labels.filter(({ name }) =>
-      TEST_FAILURE_STATES.includes(name as TestFailureStates)
+    const pendingLabels = labels.filter(({ name }) =>
+      CI_TEST_PENDING_REGEX.test(name)
     );
 
-    if (!!errorLabels.length) {
-      const [issueNumber] = ref.match(/[\d]+/);
+    const failureLabels = labels.filter(({ name }) =>
+      CI_TEST_FAILURE_REGEX.test(name)
+    );
 
-      const originPR = new GithubRequest({
-        issueNumber: Number(issueNumber),
-        repoName: process.env.GITHUB_ORIGIN_REPO,
-        repoOwner: process.env.GITHUB_ORIGIN_USER,
-      });
+    if (!pendingLabels.length) {
+      if (!!failureLabels.length) {
+        const [issueNumber] = ref.match(/[\d]+/);
 
-      originPR.createComment(
-        `The following failures still exist on [pull-${number}](https://github.com/liferay-continuous-integration-ac/liferay-portal-ee/pull/${number}):\n${errorLabels.map(
-          ({ name }) => `${name}\n`
-        )}`
-      );
+        const originPR = new GithubRequest({
+          issueNumber: Number(issueNumber),
+          repoName: process.env.GITHUB_ORIGIN_REPO,
+          repoOwner: process.env.GITHUB_ORIGIN_USER,
+        });
+
+        originPR.createComment(
+          `The following failures still exist on [pull-${number}](https://github.com/liferay-continuous-integration-ac/liferay-portal-ee/pull/${number}):\n${failureLabels.map(
+            ({ name }) => `${name}\n`
+          )}`
+        );
+      }
     }
   }
 );
